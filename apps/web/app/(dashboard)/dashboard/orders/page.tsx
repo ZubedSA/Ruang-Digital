@@ -49,10 +49,10 @@ export default async function CustomerOrdersPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => {
-            const hasDigital = order.items.some((it) => it.productType === 'DIGITAL');
-            const hasPhysical = order.items.some((it) => it.productType === 'PHYSICAL');
-            const shipment = order.shipments[0];
+          {orders.map((order: any) => {
+            const hasDigital = (order.items || []).some((it: any) => it.productType === 'DIGITAL');
+            const hasPhysical = (order.items || []).some((it: any) => it.productType === 'PHYSICAL');
+            const shipment = order.shipments?.[0];
 
             return (
               <div
@@ -87,7 +87,7 @@ export default async function CustomerOrdersPage() {
 
                 {/* Items */}
                 <div className="space-y-2 text-xs">
-                  {order.items.map((it) => (
+                  {(order.items || []).map((it: any) => (
                     <div key={it.id} className="flex justify-between items-center text-slate-700 dark:text-slate-300">
                       <div className="flex items-center gap-2">
                         {it.productType === 'DIGITAL' ? (

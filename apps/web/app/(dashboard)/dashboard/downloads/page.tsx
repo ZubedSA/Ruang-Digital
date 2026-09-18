@@ -31,7 +31,7 @@ export default async function CustomerDownloadsHistoryPage() {
   });
 
   const totalDownloads = downloads.length;
-  const uniqueFilesCount = new Set(downloads.map((d) => d.fileId)).size;
+  const uniqueFilesCount = new Set(downloads.map((d: any) => d.fileId)).size;
 
   return (
     <div className="space-y-6">
@@ -96,7 +96,7 @@ export default async function CustomerDownloadsHistoryPage() {
           </div>
 
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
-            {downloads.map((dl) => {
+            {downloads.map((dl: any) => {
               // Generate fresh download token (valid for 30 minutes)
               const token = createSignedDownloadToken(
                 {

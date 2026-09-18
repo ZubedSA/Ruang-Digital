@@ -215,7 +215,7 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {featuredProducts.map((p) => (
+          {featuredProducts.map((p: any) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>
@@ -245,7 +245,7 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {digitalProducts.map((p) => (
+            {digitalProducts.map((p: any) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
@@ -274,8 +274,8 @@ export default async function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {physicalProducts.map((p) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {physicalProducts.map((p: any) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>
