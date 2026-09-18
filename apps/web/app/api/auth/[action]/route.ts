@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hashPassword, verifyPassword, UserRole } from '@ruang-digital/auth';
+import { hashPassword, verifyPassword } from '@ruang-digital/auth';
 import { setUserSession, clearUserSession, getCurrentUser } from '@/lib/auth';
 
 // =========================================================================

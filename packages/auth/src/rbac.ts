@@ -1,5 +1,7 @@
 import { UserRole, UserSession } from '@ruang-digital/types';
 
+export type { UserRole, UserSession } from '@ruang-digital/types';
+
 /**
  * Check if the user session has the ADMIN role
  */
