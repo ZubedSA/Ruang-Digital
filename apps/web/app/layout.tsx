@@ -1,10 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Navbar } from '@/components/Navbar';
-import { Footer } from '@/components/Footer';
-import { MobileBottomNav } from '@/components/MobileBottomNav';
-import { CartProvider } from '@/components/CartContext';
+import { StorefrontShell } from '@/components/StorefrontShell';
 import { getCurrentUser } from '@/lib/auth';
 import { ThemeProvider, ThemeScript } from '@ruang-digital/ui';
 
@@ -35,12 +32,9 @@ export default async function RootLayout({
       </head>
       <body className="flex min-h-screen flex-col font-sans bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-150">
         <ThemeProvider storageKey="ruang-digital-theme" defaultTheme="system">
-          <CartProvider>
-            <Navbar user={user} />
-            <main className="flex-1 pb-16 md:pb-0">{children}</main>
-            <Footer />
-            <MobileBottomNav user={user} />
-          </CartProvider>
+          <StorefrontShell user={user}>
+            {children}
+          </StorefrontShell>
         </ThemeProvider>
       </body>
     </html>

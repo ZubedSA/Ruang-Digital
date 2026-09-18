@@ -1,6 +1,6 @@
 import { cache } from 'react';
 import { cookies } from 'next/headers';
-import { verifySessionToken, SESSION_COOKIE_OPTIONS, createSessionToken } from '@ruang-digital/auth';
+import { verifySessionToken, isAdmin, SESSION_COOKIE_OPTIONS, createSessionToken } from '@ruang-digital/auth';
 import { UserSession } from '@ruang-digital/types';
 
 const COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'rd_session';
@@ -30,3 +30,25 @@ export async function setUserSession(user: UserSession): Promise<void> {
 export async function clearUserSession(): Promise<void> {
   cookies().delete(COOKIE_NAME);
 }
+
+/**
+ * Admin session helpers
+ */
+export const getAdminSession = cache(async (): Promise<UserSession | null> => {
+  const user = await getCurrentUser();
+  if (!user || !isAdmin(user)) {
+    return null;
+  }
+  return user;
+});
+
+export async function requireAdmin(): Promise<UserSession> {
+  const session = await getAdminSession();
+  if (!session) {
+    throw new Error('UNAUTHORIZED: Akses hanya untuk Administrator.');
+  }
+  return session;
+}
+
+export const setAdminSession = setUserSession;
+export const clearAdminSession = clearUserSession;

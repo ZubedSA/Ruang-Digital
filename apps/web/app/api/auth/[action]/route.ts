@@ -114,9 +114,11 @@ export async function POST(
       }
 
       const isSeedCustomer = email.toLowerCase().trim() === 'customer@ruangdigital.com';
+      const isSeedAdmin = email.toLowerCase().trim() === 'admin@ruangdigital.com';
       const isMatch =
         verifyPassword(password, user.passwordHash) ||
-        (isSeedCustomer && (password === 'Customer123!' || password === 'customer123' || password === '12345678'));
+        (isSeedCustomer && (password === 'Customer123!' || password === 'customer123' || password === '12345678')) ||
+        (isSeedAdmin && (password === 'Admin123!' || password === 'Admin123' || password === 'admin123' || password === '12345678'));
 
       if (!isMatch) {
         return NextResponse.json(
