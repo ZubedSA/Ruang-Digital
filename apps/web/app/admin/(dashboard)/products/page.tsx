@@ -74,7 +74,11 @@ export default async function AdminProductsPage() {
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <img
-                          src={p.featuredImage}
+                          src={
+                            p.featuredImage && !p.featuredImage.includes('/uploads/product-')
+                              ? p.featuredImage
+                              : 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=200'
+                          }
                           alt={p.name}
                           className="h-10 w-10 rounded-lg object-cover bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0"
                         />
@@ -161,7 +165,11 @@ export default async function AdminProductsPage() {
             <div key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm dark:border-slate-800 dark:bg-slate-900 transition-colors">
               <div className="flex items-start gap-3">
                 <img
-                  src={p.featuredImage}
+                  src={
+                    p.featuredImage && !p.featuredImage.includes('/uploads/product-')
+                      ? p.featuredImage
+                      : 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=200'
+                  }
                   alt={p.name}
                   className="h-14 w-14 rounded-xl object-cover bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0"
                 />

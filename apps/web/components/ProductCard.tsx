@@ -63,13 +63,25 @@ export function ProductCard({ product }: { product: ProductCardData }) {
     }
   };
 
+  const defaultPlaceholder =
+    product.type === 'DIGITAL'
+      ? 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=800&auto=format&fit=crop&q=80'
+      : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80';
+
+  const [imgSrc, setImgSrc] = useState(
+    product.featuredImage && !product.featuredImage.includes('/uploads/product-')
+      ? product.featuredImage
+      : defaultPlaceholder
+  );
+
   return (
     <div className="group relative flex flex-col rounded-2xl border border-slate-200/80 bg-white shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-md dark:border-slate-800 dark:bg-slate-900 overflow-hidden">
       {/* Product Image & Badges */}
       <Link href={`/produk/${product.slug}`} className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100 dark:bg-slate-800">
         <img
-          src={product.featuredImage}
+          src={imgSrc}
           alt={product.name}
+          onError={() => setImgSrc(defaultPlaceholder)}
           className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
         />

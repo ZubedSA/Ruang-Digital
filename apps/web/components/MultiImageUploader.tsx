@@ -31,8 +31,55 @@ export function MultiImageUploader({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [pastedUrl, setPastedUrl] = useState('');
+  const [brokenUrls, setBrokenUrls] = useState<Record<string, boolean>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Compress image client-side via HTML5 Canvas into lightweight WebP/JPEG Data URL
+   * This guarantees 100% cloud reliability on Cloudflare Workers without needing local disk writes.
+   */
+  const compressImage = (file: File, maxDim = 1200, quality = 0.82): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let { width, height } = img;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(e.target?.result as string);
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+          let dataUrl = canvas.toDataURL('image/webp', quality);
+          if (!dataUrl.startsWith('data:image/webp')) {
+            dataUrl = canvas.toDataURL('image/jpeg', quality);
+          }
+          resolve(dataUrl);
+        };
+        img.onerror = () => reject(new Error('Format gambar tidak dapat dibaca'));
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Gagal membaca file'));
+      reader.readAsDataURL(file);
+    });
+  };
 
   const handleFiles = async (fileList: FileList | File[]) => {
     setErrorMsg(null);
@@ -51,8 +98,8 @@ export function MultiImageUploader({
         setErrorMsg('Semua file harus berupa format gambar (JPG, PNG, WEBP, GIF).');
         return;
       }
-      if (f.size > 5 * 1024 * 1024) {
-        setErrorMsg(`File ${f.name} melebihi batas 5 MB.`);
+      if (f.size > 8 * 1024 * 1024) {
+        setErrorMsg(`File ${f.name} melebihi batas 8 MB.`);
         return;
       }
     }
@@ -62,25 +109,14 @@ export function MultiImageUploader({
 
     try {
       for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const res = await fetch('/api/admin/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || `Gagal mengunggah foto ${file.name}`);
-        }
-
-        uploadedUrls.push(data.url);
+        // Compress client-side into lightweight Data URL
+        const dataUrl = await compressImage(file);
+        uploadedUrls.push(dataUrl);
       }
 
       onChange([...images, ...uploadedUrls]);
     } catch (err: any) {
-      setErrorMsg(err.message || 'Terjadi kesalahan saat mengunggah foto.');
+      setErrorMsg(err.message || 'Terjadi kesalahan saat memproses foto.');
     } finally {
       setIsUploading(false);
     }
@@ -181,30 +217,82 @@ export function MultiImageUploader({
         </form>
       )}
 
+      {/* Alert if broken images are detected */}
+      {images.some((u) => brokenUrls[u] || (typeof u === 'string' && (u.includes('/uploads/product-') || u.startsWith('/uploads/')))) && (
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3.5 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+          <div className="flex items-start gap-2.5">
+            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+            <div>
+              <p className="font-bold">Foto Produk Lama Rusak Terdeteksi</p>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
+                Foto lama tersimpan di folder disk lokal (<code>/uploads/...</code>) yang tidak tersedia di serverless Cloudflare Workers. Silakan hapus foto yang bertanda merah dan unggah kembali melalui tombol <strong>Tambah Foto</strong> di bawah. Foto baru otomatis dioptimalkan dan disimpan langsung ke database secara permanen.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const valid = images.filter(
+                (u) => !brokenUrls[u] && !u.includes('/uploads/product-') && !u.startsWith('/uploads/')
+              );
+              onChange(valid);
+            }}
+            className="shrink-0 rounded-lg bg-rose-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-rose-500 shadow-sm"
+          >
+            Hapus Semua Foto Rusak
+          </button>
+        </div>
+      )}
+
       {/* Grid Thumbnail Preview */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        {images.map((url, idx) => (
-          <div
-            key={`${url}-${idx}`}
-            className={`group relative aspect-square overflow-hidden rounded-2xl border transition-all ${
-              idx === 0
-                ? 'border-amber-500/80 bg-slate-100 dark:bg-slate-950 shadow-md ring-2 ring-amber-500/30'
-                : 'border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700'
-            }`}
-          >
-            <img
-              src={url}
-              alt={`Foto Produk ${idx + 1}`}
-              className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
-            />
+        {images.map((url, idx) => {
+          const isBroken =
+            brokenUrls[url] ||
+            (typeof url === 'string' && (url.includes('/uploads/product-') || url.startsWith('/uploads/')));
 
-            {/* Badge Cover untuk foto index 0 */}
-            {idx === 0 && (
-              <div className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-slate-950 shadow-md">
-                <Star className="h-3 w-3 fill-current" />
-                <span>Foto Utama (Cover)</span>
-              </div>
-            )}
+          return (
+            <div
+              key={`${url}-${idx}`}
+              className={`group relative aspect-square overflow-hidden rounded-2xl border transition-all ${
+                isBroken
+                  ? 'border-rose-400 bg-rose-50/50 dark:border-rose-900 dark:bg-rose-950/30'
+                  : idx === 0
+                  ? 'border-amber-500/80 bg-slate-100 dark:bg-slate-950 shadow-md ring-2 ring-amber-500/30'
+                  : 'border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-950 hover:border-slate-300 dark:hover:border-slate-700'
+              }`}
+            >
+              {isBroken ? (
+                <div className="flex h-full w-full flex-col items-center justify-center p-3 text-center">
+                  <AlertCircle className="h-6 w-6 text-rose-500 mb-1" />
+                  <span className="text-[10px] font-bold text-rose-700 dark:text-rose-300">Foto Rusak (404)</span>
+                  <span className="text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">Format disk lokal lama</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveImage(idx)}
+                    className="mt-2 text-[10px] font-bold bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded-lg shadow-sm"
+                  >
+                    Hapus
+                  </button>
+                </div>
+              ) : (
+                <img
+                  src={url}
+                  alt={`Foto Produk ${idx + 1}`}
+                  onError={() => {
+                    setBrokenUrls((prev) => ({ ...prev, [url]: true }));
+                  }}
+                  className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-105"
+                />
+              )}
+
+              {/* Badge Cover untuk foto index 0 */}
+              {idx === 0 && !isBroken && (
+                <div className="absolute top-2 left-2 z-10 flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-slate-950 shadow-md">
+                  <Star className="h-3 w-3 fill-current" />
+                  <span>Foto Utama (Cover)</span>
+                </div>
+              )}
 
             {/* Hover Action Overlay */}
             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-2">
@@ -257,7 +345,8 @@ export function MultiImageUploader({
               </div>
             </div>
           </div>
-        ))}
+        );
+      })}
 
         {/* Dropzone & Add Button */}
         {images.length < maxImages && (

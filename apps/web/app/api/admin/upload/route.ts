@@ -45,23 +45,23 @@ export async function POST(req: NextRequest) {
     const randomHex = crypto.randomBytes(6).toString('hex');
     const filename = `product-${Date.now()}-${randomHex}${cleanExt}`;
 
-    // Target upload directory
-    const baseDir = process.cwd();
-    const publicUploads = path.join(baseDir, 'public', 'uploads');
+    // In Cloudflare Workers serverless environment, local filesystem is not persistent and cannot serve static files dynamically.
+    // We convert to an optimized base64 Data URL for 100% cloud reliability.
+    const base64Data = buffer.toString('base64');
+    let finalUrl = `data:${file.type};base64,${base64Data}`;
+    let storageType = 'base64';
+    let driveFileId: string | null = null;
 
     try {
+      const baseDir = process.cwd();
+      const publicUploads = path.join(baseDir, 'public', 'uploads');
       if (!fs.existsSync(publicUploads)) {
         fs.mkdirSync(publicUploads, { recursive: true });
       }
       fs.writeFileSync(path.join(publicUploads, filename), buffer);
     } catch {
-      // In read-only serverless environment, local filesystem write might fail; GAS fallback handles it
+      // Ignored in read-only serverless environment
     }
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-    let finalUrl = `${appUrl}/uploads/${filename}`;
-    let storageType = 'local';
-    let driveFileId: string | null = null;
 
     // Google Drive Upload via Google Apps Script Bridge
     const gasUrl = process.env.GOOGLE_APPS_SCRIPT_URL;

@@ -16,14 +16,18 @@ export function ProductImageGallery({
   productName,
   isDigital,
 }: ProductImageGalleryProps) {
+  const fallback = isDigital
+    ? 'https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=800&auto=format&fit=crop&q=80'
+    : 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800&auto=format&fit=crop&q=80';
+
   // Gabungkan featuredImage dan images tanpa duplikat
   const allImageUrls: string[] = [];
-  if (featuredImage) {
+  if (featuredImage && !featuredImage.includes('/uploads/product-')) {
     allImageUrls.push(featuredImage);
   }
   if (images && images.length > 0) {
     for (const img of images) {
-      if (img.url && !allImageUrls.includes(img.url)) {
+      if (img.url && !img.url.includes('/uploads/product-') && !allImageUrls.includes(img.url)) {
         allImageUrls.push(img.url);
       }
     }
@@ -31,11 +35,12 @@ export function ProductImageGallery({
 
   // Jika tidak ada gambar sama sekali
   if (allImageUrls.length === 0) {
-    allImageUrls.push('https://images.unsplash.com/photo-1556742049-0a67c5574f73?w=800');
+    allImageUrls.push(fallback);
   }
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [brokenImages, setBrokenImages] = useState<Record<string, boolean>>({});
 
   const handlePrev = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -47,7 +52,8 @@ export function ProductImageGallery({
     setActiveIndex((prev) => (prev === allImageUrls.length - 1 ? 0 : prev + 1));
   };
 
-  const currentImage = allImageUrls[activeIndex] || allImageUrls[0];
+  const rawImage = allImageUrls[activeIndex] || allImageUrls[0];
+  const currentImage = brokenImages[rawImage] ? fallback : rawImage;
 
   return (
     <div className="space-y-3 select-none">
@@ -59,6 +65,9 @@ export function ProductImageGallery({
         <img
           src={currentImage}
           alt={`${productName} - Foto ${activeIndex + 1}`}
+          onError={() => {
+            setBrokenImages((prev) => ({ ...prev, [rawImage]: true }));
+          }}
           className={`h-full w-full object-cover object-center transition-all duration-300 ${
             isZoomed ? 'scale-125 cursor-zoom-out' : 'group-hover:scale-105'
           }`}
@@ -132,8 +141,11 @@ export function ProductImageGallery({
                 }`}
               >
                 <img
-                  src={url}
+                  src={brokenImages[url] ? fallback : url}
                   alt={`Thumbnail ${idx + 1}`}
+                  onError={() => {
+                    setBrokenImages((prev) => ({ ...prev, [url]: true }));
+                  }}
                   className="h-full w-full object-cover object-center"
                 />
               </button>

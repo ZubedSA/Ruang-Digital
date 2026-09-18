@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@ruang-digital/db';
 import { generateSlug } from '@ruang-digital/utils';
 
-import { getAdminProductById } from '@/lib/neon';
+import { getAdminProductById, neonQuery } from '@/lib/neon';
 
 // GET: Fetch single product details for editing
 export async function GET(
@@ -146,59 +146,109 @@ export async function PUT(
       if (images.length > 0) {
         finalFeaturedImage = images[0];
       }
-      // Hapus gambar lama dan ganti dengan urutan gambar baru
-      await prisma.productImage.deleteMany({ where: { productId: id } });
-      if (images.length > 0) {
-        await prisma.productImage.createMany({
-          data: images.map((url: string, index: number) => ({
-            productId: id,
-            url,
-            sortOrder: index,
-          })),
-        });
+      try {
+        await prisma.productImage.deleteMany({ where: { productId: id } });
+        if (images.length > 0) {
+          await prisma.productImage.createMany({
+            data: images.map((url: string, index: number) => ({
+              productId: id,
+              url,
+              sortOrder: index,
+            })),
+          });
+        }
+      } catch (imgErr) {
+        console.warn('Prisma image update failed, using Neon fallback:', imgErr);
+        await neonQuery('DELETE FROM "ProductImage" WHERE "productId" = $1', [id]);
+        for (let i = 0; i < images.length; i++) {
+          const imgId = `img-${id}-${i}-${Date.now().toString().slice(-4)}`;
+          await neonQuery(
+            'INSERT INTO "ProductImage" (id, "productId", url, "sortOrder", "createdAt") VALUES ($1, $2, $3, $4, NOW())',
+            [imgId, id, images[i], i]
+          );
+        }
       }
     }
 
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: {
-        name: name !== undefined ? name : existing.name,
-        slug: finalSlug,
-        description: description !== undefined ? description : existing.description,
-        shortDescription: shortDescription !== undefined ? shortDescription : existing.shortDescription,
-        type: type !== undefined ? type : existing.type,
-        status: status !== undefined ? status : existing.status,
-        basePrice: basePrice !== undefined ? parseInt(basePrice, 10) : existing.basePrice,
-        discountPrice: discountPrice ? parseInt(discountPrice, 10) : null,
-        categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
-        featuredImage: finalFeaturedImage,
-        isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : existing.isFeatured,
-        stock: type === 'PHYSICAL' ? parseInt(stock || 0, 10) : 0,
-        weightInGrams: type === 'PHYSICAL' ? parseInt(weightInGrams || 0, 10) : null,
-        sku: sku !== undefined ? sku : existing.sku,
-        files: filesOperation,
-      },
-      include: {
-        category: true,
-        files: true,
-        images: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
-
-    // Record system audit log
-    await prisma.auditLog.create({
-      data: {
-        action: 'UPDATE_PRODUCT',
-        entity: 'Product',
-        entityId: updatedProduct.id,
-        details: {
-          name: updatedProduct.name,
-          basePrice: updatedProduct.basePrice,
-          status: updatedProduct.status,
-          updatedAt: new Date().toISOString(),
+    let updatedProduct: any = null;
+    try {
+      updatedProduct = await prisma.product.update({
+        where: { id },
+        data: {
+          name: name !== undefined ? name : existing.name,
+          slug: finalSlug,
+          description: description !== undefined ? description : existing.description,
+          shortDescription: shortDescription !== undefined ? shortDescription : existing.shortDescription,
+          type: type !== undefined ? type : existing.type,
+          status: status !== undefined ? status : existing.status,
+          basePrice: basePrice !== undefined ? parseInt(basePrice, 10) : existing.basePrice,
+          discountPrice: discountPrice ? parseInt(discountPrice, 10) : null,
+          categoryId: categoryId !== undefined ? categoryId : existing.categoryId,
+          featuredImage: finalFeaturedImage,
+          isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : existing.isFeatured,
+          stock: type === 'PHYSICAL' ? parseInt(stock || 0, 10) : 0,
+          weightInGrams: type === 'PHYSICAL' ? parseInt(weightInGrams || 0, 10) : null,
+          sku: sku !== undefined ? sku : existing.sku,
+          files: filesOperation,
         },
-      },
-    });
+        include: {
+          category: true,
+          files: true,
+          images: { orderBy: { sortOrder: 'asc' } },
+        },
+      });
+    } catch (updateErr) {
+      console.warn('Prisma product update failed, using Neon HTTP fallback:', updateErr);
+      const parsedBasePrice = basePrice !== undefined ? parseInt(basePrice, 10) : existing.basePrice;
+      const parsedDiscountPrice = discountPrice ? parseInt(discountPrice, 10) : null;
+      const parsedStock = type === 'PHYSICAL' ? parseInt(stock || 0, 10) : 0;
+      const parsedWeight = type === 'PHYSICAL' ? parseInt(weightInGrams || 0, 10) : null;
+      const parsedIsFeatured = isFeatured !== undefined ? Boolean(isFeatured) : existing.isFeatured;
+
+      await neonQuery(
+        `UPDATE "Product" SET 
+          name = $1, slug = $2, description = $3, "shortDescription" = $4,
+          type = $5, status = $6, "basePrice" = $7, "discountPrice" = $8,
+          "categoryId" = $9, "featuredImage" = $10, "isFeatured" = $11,
+          stock = $12, "weightInGrams" = $13, sku = $14, "updatedAt" = NOW()
+        WHERE id = $15`,
+        [
+          name !== undefined ? name : existing.name,
+          finalSlug,
+          description !== undefined ? description : existing.description,
+          shortDescription !== undefined ? shortDescription : existing.shortDescription,
+          type !== undefined ? type : existing.type,
+          status !== undefined ? status : existing.status,
+          parsedBasePrice,
+          parsedDiscountPrice,
+          categoryId !== undefined ? categoryId : existing.categoryId,
+          finalFeaturedImage,
+          parsedIsFeatured,
+          parsedStock,
+          parsedWeight,
+          sku !== undefined ? sku : existing.sku,
+          id,
+        ]
+      );
+      updatedProduct = await getAdminProductById(id);
+    }
+
+    // Record system audit log (non-blocking)
+    try {
+      await prisma.auditLog.create({
+        data: {
+          action: 'UPDATE_PRODUCT',
+          entity: 'Product',
+          entityId: id,
+          details: {
+            name: name || existing.name,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      });
+    } catch {
+      // Ignored
+    }
 
     return NextResponse.json({ success: true, product: updatedProduct });
   } catch (error: any) {
