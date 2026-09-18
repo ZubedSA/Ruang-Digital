@@ -78,7 +78,7 @@ export async function GET(
     await prisma.download.create({
       data: {
         userId: currentUser.id,
-        productId: tokenData.productId,
+        productId: file.productId,
         orderId: tokenData.orderId,
         fileId: tokenData.fileId,
         ipAddress: ip,

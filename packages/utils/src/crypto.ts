@@ -33,6 +33,7 @@ export interface DownloadTokenPayload {
   userId: string;
   orderId: string;
   fileId: string;
+  productId?: string;
   expiresAt: number; // Unix timestamp in ms
 }
 
