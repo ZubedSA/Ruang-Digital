@@ -143,6 +143,7 @@ export async function createOrderFromCheckout(
 
   const orderNumber = generateOrderNumber();
 
+  const newOrder = await prisma.$transaction(async (tx) => {
     let validAddressId: string | null = null;
     if (calculation.hasPhysicalItems) {
       if (payload.shippingAddressId) {
