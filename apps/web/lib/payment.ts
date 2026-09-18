@@ -4,8 +4,9 @@ import {
   PaymentTransactionPayload,
   PaymentTransactionResponse,
   MidtransWebhookBody,
+  OrderStatus,
+  PaymentStatus,
 } from '@ruang-digital/types';
-import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { generateLicenseKey } from '@ruang-digital/utils';
 
 const SERVER_KEY = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-placeholder';
@@ -122,34 +123,34 @@ export class MidtransPaymentService {
     const transactionStatus = notification.transaction_status;
     const fraudStatus = notification.fraud_status;
 
-    let paymentStatus: PaymentStatus = PaymentStatus.PENDING;
+    let paymentStatus: PaymentStatus = 'PENDING';
     let orderStatus: OrderStatus = order.status;
 
     if (transactionStatus === 'capture') {
       if (fraudStatus === 'challenge') {
-        paymentStatus = PaymentStatus.PENDING;
+        paymentStatus = 'PENDING';
       } else if (fraudStatus === 'accept') {
-        paymentStatus = PaymentStatus.PAID;
+        paymentStatus = 'PAID';
       }
     } else if (transactionStatus === 'settlement') {
-      paymentStatus = PaymentStatus.PAID;
+      paymentStatus = 'PAID';
     } else if (['cancel', 'deny', 'expire'].includes(transactionStatus)) {
-      paymentStatus = PaymentStatus.FAILED;
-      orderStatus = OrderStatus.CANCELLED;
+      paymentStatus = 'FAILED';
+      orderStatus = 'CANCELLED';
     } else if (transactionStatus === 'pending') {
-      paymentStatus = PaymentStatus.PENDING;
+      paymentStatus = 'PENDING';
     }
 
     // Check if already paid (Idempotency guarantee)
-    if (order.status === OrderStatus.PAID || order.status === OrderStatus.COMPLETED) {
+    if (order.status === 'PAID' || order.status === 'COMPLETED') {
       return { success: true, message: 'Order is already marked as PAID. Skipped duplicate processing.' };
     }
 
     // If payment is successful, transition order status
-    if (paymentStatus === PaymentStatus.PAID) {
+    if (paymentStatus === 'PAID') {
       const hasPhysical = order.items.some((item) => item.productType === 'PHYSICAL');
       // Digital-only orders transition directly to COMPLETED; Physical transitions to PROCESSING
-      orderStatus = hasPhysical ? OrderStatus.PROCESSING : OrderStatus.COMPLETED;
+      orderStatus = hasPhysical ? 'PROCESSING' : 'COMPLETED';
     }
 
     // Execute atomic transaction for Payment update, Order update, and License generation
@@ -161,7 +162,7 @@ export class MidtransPaymentService {
           status: paymentStatus,
           paymentMethod: notification.payment_type,
           rawPayload: notification as any,
-          paidAt: paymentStatus === PaymentStatus.PAID ? new Date() : undefined,
+          paidAt: paymentStatus === 'PAID' ? new Date() : undefined,
         },
         create: {
           orderId: order.id,
@@ -171,7 +172,7 @@ export class MidtransPaymentService {
           status: paymentStatus,
           amount: Math.round(parseFloat(notification.gross_amount)),
           rawPayload: notification as any,
-          paidAt: paymentStatus === PaymentStatus.PAID ? new Date() : undefined,
+          paidAt: paymentStatus === 'PAID' ? new Date() : undefined,
         },
       });
 
@@ -184,7 +185,7 @@ export class MidtransPaymentService {
       });
 
       // 3. If paid, generate license keys if required and handle stock reductions
-      if (paymentStatus === PaymentStatus.PAID) {
+      if (paymentStatus === 'PAID') {
         for (const item of order.items) {
           // If digital product with files or software, create license key record
           if (item.productType === 'DIGITAL') {

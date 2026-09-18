@@ -2,7 +2,6 @@ import { prisma } from './db';
 import { CartCalculation, CheckoutPayload, CheckoutResult, CartItemData } from '@ruang-digital/types';
 import { generateOrderNumber } from '@ruang-digital/utils';
 import { paymentService } from './payment';
-import { OrderStatus } from '@prisma/client';
 
 const DEFAULT_SHIPPING_FLAT_FEE = 15000; // Rp 15.000 default flat shipping
 
@@ -164,7 +163,7 @@ export async function createOrderFromCheckout(
       data: {
         orderNumber,
         userId,
-        status: OrderStatus.PENDING,
+        status: 'PENDING',
         subtotalAmount: calculation.subtotal,
         discountAmount: calculation.discountAmount,
         shippingFee: calculation.shippingFee,
