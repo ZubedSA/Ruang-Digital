@@ -5,6 +5,9 @@
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
+    "@ruang-digital/db#build": {
+      "cache": false
+    },
     "lint": {
       "dependsOn": ["^lint"]
     },

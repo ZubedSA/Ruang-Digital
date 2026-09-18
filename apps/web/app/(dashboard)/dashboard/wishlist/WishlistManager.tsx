@@ -48,8 +48,17 @@ export function WishlistManager({ initialItems }: WishlistManagerProps) {
     }
   };
 
-  const handleAddToCart = async (item: WishlistItem) => {
-    await addItem(item.product.id, 1);
+  const handleAddToCart = (item: WishlistItem) => {
+    addItem({
+      productId: item.product.id,
+      variantId: null,
+      name: item.product.name,
+      slug: item.product.slug,
+      price: item.product.discountPrice ?? item.product.basePrice,
+      image: item.product.featuredImage,
+      type: item.product.type,
+      quantity: 1,
+    });
   };
 
   return (
