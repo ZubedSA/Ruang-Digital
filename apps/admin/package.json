@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3001",
-    "build": "pnpm --filter @ruang-digital/db generate && next build",
+    "build": "pnpm --filter @ruang-digital/db generate && next build && npx -y @opennextjs/cloudflare build --skipNextBuild --dangerouslyUseUnsupportedNextVersion",
     "start": "next start -p 3001",
     "lint": "next lint",
     "check-types": "tsc --noEmit"
