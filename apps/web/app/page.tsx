@@ -4,6 +4,8 @@ import { prisma } from '@/lib/db';
 import { ProductCard } from '@/components/ProductCard';
 import { ArrowRight, Sparkles, Laptop, BookOpen, Layers, ShoppingBag, ShieldCheck, Download, Truck } from 'lucide-react';
 
+import { getStoreCategories, getStoreFeaturedProducts, getStoreDigitalProducts, getStorePhysicalProducts } from '@/lib/neon';
+
 export const revalidate = 60; // Revalidate cache every 60s
 
 export default async function HomePage() {
@@ -40,7 +42,25 @@ export default async function HomePage() {
     digitalProducts = digi;
     physicalProducts = phys;
   } catch (error) {
-    console.warn('Database not connected or seeded yet, using fallback showcase items.', error);
+    console.warn('Prisma query failed in runtime, attempting Neon HTTP API fallback...', error);
+    try {
+      const [neonCats, neonFeat, neonDigi, neonPhys] = await Promise.all([
+        getStoreCategories(6),
+        getStoreFeaturedProducts(4),
+        getStoreDigitalProducts(4),
+        getStorePhysicalProducts(4),
+      ]);
+      categories = neonCats;
+      featuredProducts = neonFeat;
+      digitalProducts = neonDigi;
+      physicalProducts = neonPhys;
+    } catch (neonErr) {
+      console.error('Neon HTTP query fallback error:', neonErr);
+    }
+  }
+
+  // If still empty (e.g. database not seeded), provide fallback showcase items
+  if (featuredProducts.length === 0) {
     // Graceful fallback for initial zero-DB rendering
     featuredProducts = [
       {

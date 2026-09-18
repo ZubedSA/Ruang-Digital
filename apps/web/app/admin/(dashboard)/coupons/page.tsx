@@ -2,6 +2,8 @@ import React from 'react';
 import { prisma } from '@ruang-digital/db';
 import { CouponManager } from './CouponManager';
 
+import { getAdminCouponsList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminCouponsPage() {
@@ -16,7 +18,12 @@ export default async function AdminCouponsPage() {
       orderBy: { createdAt: 'desc' },
     });
   } catch (err) {
-    console.warn('DB error fetching coupons:', err);
+    console.warn('Prisma admin coupons query failed, using Neon HTTP fallback:', err);
+    try {
+      coupons = await getAdminCouponsList();
+    } catch (neonErr) {
+      console.error('Neon admin coupons query error:', neonErr);
+    }
   }
 
   return (

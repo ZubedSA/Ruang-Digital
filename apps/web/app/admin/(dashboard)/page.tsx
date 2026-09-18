@@ -4,6 +4,8 @@ import { prisma } from '@ruang-digital/db';
 import { formatRupiah, formatIndonesianDateTime } from '@ruang-digital/utils';
 import { DollarSign, ShoppingCart, Users, Package, AlertTriangle } from 'lucide-react';
 
+import { getAdminDashboardStats } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardOverview() {
@@ -52,7 +54,19 @@ export default async function AdminDashboardOverview() {
     lowStockProducts = lowStock;
     recentOrders = recent;
   } catch (err) {
-    console.warn('Admin stats error (DB unmigrated or empty):', err);
+    console.warn('Prisma admin stats error, falling back to Neon HTTP:', err);
+    try {
+      const stats = await getAdminDashboardStats();
+      totalRevenue = stats.totalRevenue;
+      totalOrders = stats.totalOrders;
+      totalCustomers = stats.totalCustomers;
+      digitalProductsCount = stats.digitalProductsCount;
+      physicalProductsCount = stats.physicalProductsCount;
+      lowStockProducts = stats.lowStockProducts;
+      recentOrders = stats.recentOrders;
+    } catch (neonErr) {
+      console.error('Neon stats error:', neonErr);
+    }
   }
 
   return (

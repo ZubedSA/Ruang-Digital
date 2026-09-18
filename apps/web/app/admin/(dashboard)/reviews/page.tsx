@@ -2,6 +2,8 @@ import React from 'react';
 import { prisma } from '@ruang-digital/db';
 import { ReviewModerator } from './ReviewModerator';
 
+import { getAdminReviewsList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminReviewsPage() {
@@ -19,7 +21,12 @@ export default async function AdminReviewsPage() {
       },
     });
   } catch (err) {
-    console.warn('DB error fetching reviews:', err);
+    console.warn('Prisma reviews query failed, using Neon fallback:', err);
+    try {
+      reviews = await getAdminReviewsList();
+    } catch (neonErr) {
+      console.error('Neon reviews query error:', neonErr);
+    }
   }
 
   return (

@@ -4,6 +4,8 @@ import { formatRupiah, formatIndonesianDateTime } from '@ruang-digital/utils';
 import { Truck, Download } from 'lucide-react';
 import { OrderRowAction } from './OrderRowAction';
 
+import { getAdminOrdersList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminOrdersPage() {
@@ -19,7 +21,12 @@ export default async function AdminOrdersPage() {
       },
     });
   } catch (err) {
-    console.warn('DB error', err);
+    console.warn('Prisma admin orders query failed, using Neon HTTP fallback:', err);
+    try {
+      orders = await getAdminOrdersList();
+    } catch (neonErr) {
+      console.error('Neon admin orders query error:', neonErr);
+    }
   }
 
   return (

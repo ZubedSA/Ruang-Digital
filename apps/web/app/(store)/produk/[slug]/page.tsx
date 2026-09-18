@@ -2,6 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
+import { getStoreProductBySlug } from '@/lib/neon';
 import { formatRupiah, formatFileSize } from '@ruang-digital/utils';
 import { AddToCartDetail } from './AddToCartDetail';
 import { ProductReviews } from '@/components/ProductReviews';
@@ -13,34 +14,54 @@ interface Props {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = await prisma.product.findUnique({
-    where: { slug: params.slug },
-    include: { category: true },
-  });
+  let product: any = null;
+  try {
+    product = await prisma.product.findUnique({
+      where: { slug: params.slug },
+      include: { category: true },
+    });
+  } catch (err) {
+    product = await getStoreProductBySlug(params.slug);
+  }
+
+  if (!product) {
+    product = await getStoreProductBySlug(params.slug);
+  }
 
   if (!product) return { title: 'Produk Tidak Ditemukan — Ruang Digital' };
 
   return {
     title: `${product.name} — Ruang Digital`,
-    description: product.shortDescription || product.description.substring(0, 160),
+    description: product.shortDescription || product.description?.substring(0, 160) || '',
     openGraph: {
       title: product.name,
-      description: product.shortDescription || product.description.substring(0, 160),
+      description: product.shortDescription || product.description?.substring(0, 160) || '',
       images: [{ url: product.featuredImage }],
     },
   };
 }
 
 export default async function ProductDetailPage({ params }: Props) {
-  const product = await prisma.product.findUnique({
-    where: { slug: params.slug },
-    include: {
-      category: true,
-      variants: true,
-      images: { orderBy: { sortOrder: 'asc' } },
-      files: { where: { isActive: true } },
-    },
-  });
+  let product: any = null;
+
+  try {
+    product = await prisma.product.findUnique({
+      where: { slug: params.slug },
+      include: {
+        category: true,
+        variants: true,
+        images: { orderBy: { sortOrder: 'asc' } },
+        files: { where: { isActive: true } },
+      },
+    });
+  } catch (err) {
+    console.warn('Prisma product detail error, falling back to Neon HTTP:', err);
+    product = await getStoreProductBySlug(params.slug);
+  }
+
+  if (!product) {
+    product = await getStoreProductBySlug(params.slug);
+  }
 
   if (!product) notFound();
 
@@ -147,7 +168,7 @@ export default async function ProductDetailPage({ params }: Props) {
                     <Laptop className="h-4 w-4 text-indigo-600" />
                     <span>
                       File Tersedia:{' '}
-                      {product.files.map((f) => `${f.fileName} (${formatFileSize(f.fileSize)})`).join(', ')}
+                      {product.files.map((f: any) => `${f.fileName} (${formatFileSize(f.fileSize)})`).join(', ')}
                     </span>
                   </div>
                 )}

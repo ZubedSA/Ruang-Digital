@@ -3,6 +3,8 @@ import { prisma } from '@ruang-digital/db';
 import { formatIndonesianDateTime } from '@ruang-digital/utils';
 import { ShieldCheck, Download, Lock, Globe } from 'lucide-react';
 
+import { getAdminDownloadLogsList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminAuditLogsPage() {
@@ -19,7 +21,12 @@ export default async function AdminAuditLogsPage() {
       },
     });
   } catch (err) {
-    console.warn('DB error fetching audit logs:', err);
+    console.warn('Prisma audit logs query failed, using Neon fallback:', err);
+    try {
+      downloadLogs = await getAdminDownloadLogsList(50);
+    } catch (neonErr) {
+      console.error('Neon audit logs query error:', neonErr);
+    }
   }
 
   const totalDownloadEvents = downloadLogs.length;

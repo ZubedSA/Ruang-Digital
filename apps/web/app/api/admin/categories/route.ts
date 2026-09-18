@@ -3,6 +3,8 @@ import { prisma } from '@ruang-digital/db';
 import { getAdminSession } from '@/lib/auth';
 import { generateSlug } from '@ruang-digital/utils';
 
+import { getAdminCategoriesList } from '@/lib/neon';
+
 export async function GET() {
   try {
     const admin = await getAdminSession();
@@ -10,19 +12,30 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const categories = await prisma.category.findMany({
-      include: {
-        _count: {
-          select: { products: true },
+    let categories: any[] = [];
+    try {
+      categories = await prisma.category.findMany({
+        include: {
+          _count: {
+            select: { products: true },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (prismaErr) {
+      console.warn('Prisma categories GET failed, using Neon fallback:', prismaErr);
+      categories = await getAdminCategoriesList();
+    }
 
     return NextResponse.json({ success: true, data: categories });
   } catch (error: any) {
     console.error('Admin categories GET error:', error);
-    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    try {
+      const categories = await getAdminCategoriesList();
+      return NextResponse.json({ success: true, data: categories });
+    } catch {
+      return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+    }
   }
 }
 

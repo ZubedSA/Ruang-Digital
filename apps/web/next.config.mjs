@@ -9,6 +9,7 @@ const nextConfig = {
     '@ruang-digital/utils',
   ],
   poweredByHeader: false,
+  serverExternalPackages: ['@prisma/client', '.prisma/client'],
   experimental: {
     optimizePackageImports: ['lucide-react', '@ruang-digital/ui'],
   },

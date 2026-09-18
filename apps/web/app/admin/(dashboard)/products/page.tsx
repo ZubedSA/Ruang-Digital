@@ -4,6 +4,8 @@ import { prisma } from '@ruang-digital/db';
 import { formatRupiah } from '@ruang-digital/utils';
 import { Plus, Download, Package, Edit, ExternalLink } from 'lucide-react';
 
+import { getAdminProductsList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminProductsPage() {
@@ -18,7 +20,12 @@ export default async function AdminProductsPage() {
       },
     });
   } catch (err) {
-    console.warn('DB error', err);
+    console.warn('Prisma admin products query failed, using Neon HTTP fallback:', err);
+    try {
+      products = await getAdminProductsList();
+    } catch (neonErr) {
+      console.error('Neon admin products query error:', neonErr);
+    }
   }
 
   return (

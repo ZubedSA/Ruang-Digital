@@ -6,5 +6,12 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
+  },
+  "vars": {
+    "DATABASE_URL": "postgresql://neondb_owner:npg_oABCY3lfFVu6@ep-noisy-firefly-b39a5fem-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=30",
+    "DIRECT_URL": "postgresql://neondb_owner:npg_oABCY3lfFVu6@ep-noisy-firefly-b39a5fem.c-4.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&connect_timeout=30",
+    "AUTH_SECRET": "e4f9b2c890176d54238e8f619b0d1e4c76b98a32190f845d0a1b2c3d4e5f6a7b",
+    "SESSION_COOKIE_NAME": "rd_session",
+    "NEXT_PUBLIC_APP_URL": "https://ruang-digital.achzubaidi07.workers.dev"
   }
 }

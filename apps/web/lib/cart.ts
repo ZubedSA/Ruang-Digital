@@ -1,4 +1,5 @@
 import { prisma } from './db';
+import { getAdminProductById } from './neon';
 import { CartCalculation, CheckoutPayload, CheckoutResult, CartItemData } from '@ruang-digital/types';
 import { generateOrderNumber } from '@ruang-digital/utils';
 import { paymentService } from './payment';
@@ -31,12 +32,21 @@ export async function calculateCartTotals(
   let hasPhysical = false;
 
   for (const raw of rawItems) {
-    const product = await prisma.product.findUnique({
-      where: { id: raw.productId },
-      include: {
-        variants: true,
-      },
-    });
+    let product: any = null;
+    try {
+      product = await prisma.product.findUnique({
+        where: { id: raw.productId },
+        include: {
+          variants: true,
+        },
+      });
+    } catch {
+      product = await getAdminProductById(raw.productId);
+    }
+
+    if (!product) {
+      product = await getAdminProductById(raw.productId);
+    }
 
     if (!product || product.status !== 'ACTIVE') continue;
 
@@ -46,7 +56,7 @@ export async function calculateCartTotals(
 
     // Check variant override if selected
     if (raw.variantId) {
-      const variant = product.variants.find((v) => v.id === raw.variantId);
+      const variant = product.variants?.find((v: any) => v.id === raw.variantId);
       if (variant) {
         price = variant.price;
         stock = variant.stock;

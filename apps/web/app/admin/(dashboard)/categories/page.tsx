@@ -2,6 +2,8 @@ import React from 'react';
 import { prisma } from '@ruang-digital/db';
 import { CategoryManager } from './CategoryManager';
 
+import { getAdminCategoriesList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminCategoriesPage() {
@@ -16,7 +18,12 @@ export default async function AdminCategoriesPage() {
       orderBy: { createdAt: 'desc' },
     });
   } catch (err) {
-    console.warn('DB error fetching categories:', err);
+    console.warn('Prisma admin categories query failed, using Neon HTTP fallback:', err);
+    try {
+      categories = await getAdminCategoriesList();
+    } catch (neonErr) {
+      console.error('Neon admin categories query error:', neonErr);
+    }
   }
 
   return (

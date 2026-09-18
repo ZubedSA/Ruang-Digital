@@ -1,6 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@ruang-digital/db';
 import { generateSlug } from '@ruang-digital/utils';
+import { getAdminProductsList } from '@/lib/neon';
+
+export async function GET() {
+  try {
+    let products: any[] = [];
+    try {
+      products = await prisma.product.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          category: true,
+          files: true,
+          variants: true,
+        },
+      });
+    } catch (prismaErr) {
+      console.warn('Prisma admin products GET failed, using Neon fallback:', prismaErr);
+      products = await getAdminProductsList();
+    }
+
+    return NextResponse.json({ success: true, data: products });
+  } catch (error: any) {
+    try {
+      const products = await getAdminProductsList();
+      return NextResponse.json({ success: true, data: products });
+    } catch (err: any) {
+      return NextResponse.json({ error: error.message || 'Gagal memuat produk' }, { status: 500 });
+    }
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {

@@ -1,8 +1,9 @@
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/db';
+import { neonQuery } from '@/lib/neon';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ruang-digital.achzubaidi07.workers.dev';
 
   const staticRoutes: MetadataRoute.Sitemap = [
     {
@@ -26,26 +27,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const products = await prisma.product.findMany({
-      where: { status: 'ACTIVE' },
-      select: { slug: true, updatedAt: true },
-    });
+    let products: any[] = [];
+    let categories: any[] = [];
+
+    try {
+      products = await prisma.product.findMany({
+        where: { status: 'ACTIVE' },
+        select: { slug: true, updatedAt: true },
+      });
+      categories = await prisma.category.findMany({
+        where: { isActive: true },
+        select: { slug: true, updatedAt: true },
+      });
+    } catch {
+      products = await neonQuery('SELECT slug, "updatedAt" FROM "Product" WHERE status = \'ACTIVE\'');
+      categories = await neonQuery('SELECT slug, "updatedAt" FROM "Category" WHERE "isActive" = true');
+    }
 
     const productRoutes: MetadataRoute.Sitemap = products.map((p: any) => ({
       url: `${baseUrl}/produk/${p.slug}`,
-      lastModified: p.updatedAt,
+      lastModified: p.updatedAt ? new Date(p.updatedAt) : new Date(),
       changeFrequency: 'weekly',
       priority: 0.8,
     }));
 
-    const categories = await prisma.category.findMany({
-      where: { isActive: true },
-      select: { slug: true, updatedAt: true },
-    });
-
     const categoryRoutes: MetadataRoute.Sitemap = categories.map((c: any) => ({
-      url: `${baseUrl}/produk?category=${c.slug}`,
-      lastModified: c.updatedAt,
+      url: `${baseUrl}/produk?cat=${c.slug}`,
+      lastModified: c.updatedAt ? new Date(c.updatedAt) : new Date(),
       changeFrequency: 'weekly',
       priority: 0.7,
     }));

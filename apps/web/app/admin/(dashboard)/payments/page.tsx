@@ -3,6 +3,8 @@ import { prisma } from '@ruang-digital/db';
 import { formatRupiah, formatIndonesianDateTime } from '@ruang-digital/utils';
 import { DollarSign, CheckCircle2, Clock, XCircle, CreditCard } from 'lucide-react';
 
+import { getAdminPaymentsList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPaymentsPage() {
@@ -21,7 +23,12 @@ export default async function AdminPaymentsPage() {
       },
     });
   } catch (err) {
-    console.warn('DB error fetching payments:', err);
+    console.warn('Prisma payments query failed, using Neon fallback:', err);
+    try {
+      payments = await getAdminPaymentsList();
+    } catch (neonErr) {
+      console.error('Neon payments query error:', neonErr);
+    }
   }
 
   const paidPayments = payments.filter((p: any) => p.status === 'PAID');

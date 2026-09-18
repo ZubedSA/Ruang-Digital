@@ -1,5 +1,6 @@
 import React from 'react';
 import { prisma } from '@/lib/db';
+import { getStoreCategories, getStoreCatalogProducts } from '@/lib/neon';
 import { ProductCard } from '@/components/ProductCard';
 import { Search, Filter, SlidersHorizontal } from 'lucide-react';
 
@@ -54,7 +55,17 @@ export default async function ProductsCatalogPage({ searchParams }: SearchParams
       orderBy,
     });
   } catch (err) {
-    console.warn('Catalog DB query fallback:', err);
+    console.warn('Prisma catalog query failed in runtime, using Neon HTTP fallback:', err);
+    try {
+      const [neonCats, neonProds] = await Promise.all([
+        getStoreCategories(50),
+        getStoreCatalogProducts({ q, cat, type, sort }),
+      ]);
+      categories = neonCats;
+      products = neonProds;
+    } catch (neonErr) {
+      console.error('Neon HTTP catalog query error:', neonErr);
+    }
   }
 
   return (

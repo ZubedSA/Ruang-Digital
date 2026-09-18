@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@ruang-digital/db';
 import { generateSlug } from '@ruang-digital/utils';
 
+import { getAdminProductById } from '@/lib/neon';
+
 // GET: Fetch single product details for editing
 export async function GET(
   req: NextRequest,
@@ -9,15 +11,26 @@ export async function GET(
 ) {
   try {
     const { id } = params;
-    const product = await prisma.product.findUnique({
-      where: { id },
-      include: {
-        category: true,
-        files: true,
-        variants: true,
-        images: { orderBy: { sortOrder: 'asc' } },
-      },
-    });
+    let product: any = null;
+
+    try {
+      product = await prisma.product.findUnique({
+        where: { id },
+        include: {
+          category: true,
+          files: true,
+          variants: true,
+          images: { orderBy: { sortOrder: 'asc' } },
+        },
+      });
+    } catch (prismaErr) {
+      console.warn('Prisma get product failed, using Neon fallback:', prismaErr);
+      product = await getAdminProductById(id);
+    }
+
+    if (!product) {
+      product = await getAdminProductById(id);
+    }
 
     if (!product) {
       return NextResponse.json(

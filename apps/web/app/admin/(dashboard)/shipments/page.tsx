@@ -2,6 +2,8 @@ import React from 'react';
 import { prisma } from '@ruang-digital/db';
 import { Truck } from 'lucide-react';
 
+import { getAdminShipmentsList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminShipmentsPage() {
@@ -20,7 +22,12 @@ export default async function AdminShipmentsPage() {
       },
     });
   } catch (e) {
-    console.warn('Shipments query error', e);
+    console.warn('Prisma shipments query failed, using Neon fallback:', e);
+    try {
+      shipments = await getAdminShipmentsList();
+    } catch (neonErr) {
+      console.error('Neon shipments query error:', neonErr);
+    }
   }
 
   return (

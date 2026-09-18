@@ -3,6 +3,8 @@ import { prisma } from '@ruang-digital/db';
 import { formatRupiah, formatIndonesianDateTime } from '@ruang-digital/utils';
 import { Users, ShoppingCart, DollarSign, Key, Phone } from 'lucide-react';
 
+import { getAdminCustomersList } from '@/lib/neon';
+
 export const dynamic = 'force-dynamic';
 
 export default async function AdminCustomersPage() {
@@ -26,7 +28,12 @@ export default async function AdminCustomersPage() {
       },
     });
   } catch (err) {
-    console.warn('DB error fetching customers:', err);
+    console.warn('Prisma admin customers query failed, using Neon HTTP fallback:', err);
+    try {
+      customers = await getAdminCustomersList();
+    } catch (neonErr) {
+      console.error('Neon admin customers query error:', neonErr);
+    }
   }
 
   const totalCustomers = customers.length;
