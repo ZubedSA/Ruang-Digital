@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,29 +36,15 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Determine extension
-    const originalExt = path.extname(file.name) || '.webp';
-    const cleanExt = originalExt.toLowerCase() === '.jpeg' ? '.jpg' : originalExt.toLowerCase();
-    const randomHex = crypto.randomBytes(6).toString('hex');
-    const filename = `product-${Date.now()}-${randomHex}${cleanExt}`;
+    const randomSuffix = Math.random().toString(36).substring(2, 8);
+    const filename = `product-${Date.now()}-${randomSuffix}.webp`;
 
-    // In Cloudflare Workers serverless environment, local filesystem is not persistent and cannot serve static files dynamically.
-    // We convert to an optimized base64 Data URL for 100% cloud reliability.
+    // Convert to base64 Data URL for 100% cloud reliability without filesystem dependencies
     const base64Data = buffer.toString('base64');
     let finalUrl = `data:${file.type};base64,${base64Data}`;
     let storageType = 'base64';
     let driveFileId: string | null = null;
 
-    try {
-      const baseDir = process.cwd();
-      const publicUploads = path.join(baseDir, 'public', 'uploads');
-      if (!fs.existsSync(publicUploads)) {
-        fs.mkdirSync(publicUploads, { recursive: true });
-      }
-      fs.writeFileSync(path.join(publicUploads, filename), buffer);
-    } catch {
-      // Ignored in read-only serverless environment
-    }
 
     // Google Drive Upload via Google Apps Script Bridge
     const gasUrl = process.env.GOOGLE_APPS_SCRIPT_URL;

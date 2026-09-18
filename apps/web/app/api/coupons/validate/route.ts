@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { neonQuery } from '@/lib/neon';
 
 export async function POST(req: NextRequest) {
   try {
@@ -11,13 +11,16 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanCode = code.trim().toUpperCase();
-    const coupon = await prisma.coupon.findUnique({
-      where: { code: cleanCode },
-    });
+    const couponRows = await neonQuery<any>(
+      'SELECT * FROM "Coupon" WHERE code = $1 LIMIT 1',
+      [cleanCode]
+    );
 
-    if (!coupon) {
+    if (!couponRows || couponRows.length === 0) {
       return NextResponse.json({ valid: false, error: 'Kode voucher tidak ditemukan' }, { status: 404 });
     }
+    const coupon = couponRows[0];
+
 
     if (!coupon.isActive) {
       return NextResponse.json({ valid: false, error: 'Voucher ini sedang tidak aktif' }, { status: 400 });

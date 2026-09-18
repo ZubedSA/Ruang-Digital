@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as crypto from 'crypto';
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,7 +31,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     const originalName = file.name;
-    const ext = path.extname(originalName).replace('.', '') || 'zip';
+    const ext = originalName.includes('.') ? (originalName.split('.').pop() || 'zip').toLowerCase() : 'zip';
     const cleanFileName = originalName.replace(/[^a-zA-Z0-9._-]/g, '_');
 
     const gasUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
@@ -88,21 +85,9 @@ export async function POST(req: NextRequest) {
       errorMessage = 'GOOGLE_APPS_SCRIPT_URL belum diatur.';
     }
 
-    // Fallback: Jika GAS belum diatur atau gagal terhubung, simpan ke local secure storage jika memungkinkan
-    const baseDir = process.cwd();
-    const localDigitalDir = path.join(baseDir, 'storage', 'digital');
-    try {
-      if (!fs.existsSync(localDigitalDir)) {
-        fs.mkdirSync(localDigitalDir, { recursive: true });
-      }
-      const randomHex = crypto.randomBytes(4).toString('hex');
-      const localSavedFileName = `digital-${Date.now()}-${randomHex}-${cleanFileName}`;
-      fs.writeFileSync(path.join(localDigitalDir, localSavedFileName), buffer);
-    } catch {
-      // Serverless env fallback
-    }
+    // Fallback: Untuk Cloudflare Workers / Serverless, gunakan ID file atau GAS
+    const finalFileId = driveFileId || `cloud_${Date.now()}_${cleanFileName}`;
 
-    const finalFileId = driveFileId || `local_${cleanFileName}`;
 
     return NextResponse.json({
       success: true,
