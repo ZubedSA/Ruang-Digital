@@ -1,0 +1,24 @@
+{
+  "name": "ruang-digital",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ruang Digital — Full-Stack E-Commerce for Digital and Physical Products",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "check-types": "turbo run check-types",
+    "db:generate": "pnpm --filter @ruang-digital/db generate",
+    "db:push": "pnpm --filter @ruang-digital/db push",
+    "db:seed": "pnpm --filter @ruang-digital/db seed",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.5"
+  },
+  "packageManager": "pnpm@9.1.0",
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

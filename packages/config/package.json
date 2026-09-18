@@ -1,0 +1,13 @@
+{
+  "name": "@ruang-digital/config",
+  "version": "1.0.0",
+  "private": true,
+  "files": [
+    "tsconfig.base.json",
+    "tailwind.config.base.js"
+  ],
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json",
+    "./tailwind.config.base.js": "./tailwind.config.base.js"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "baseUrl": ".",
+    "paths": {
+      "@ruang-digital/config/*": ["packages/config/*"],
+      "@ruang-digital/types": ["packages/types/src/index.ts"],
+      "@ruang-digital/types/*": ["packages/types/src/*"],
+      "@ruang-digital/utils": ["packages/utils/src/index.ts"],
+      "@ruang-digital/utils/*": ["packages/utils/src/*"],
+      "@ruang-digital/db": ["packages/db/src/index.ts"],
+      "@ruang-digital/db/*": ["packages/db/src/*"],
+      "@ruang-digital/auth": ["packages/auth/src/index.ts"],
+      "@ruang-digital/auth/*": ["packages/auth/src/*"],
+      "@ruang-digital/ui": ["packages/ui/src/index.ts"],
+      "@ruang-digital/ui/*": ["packages/ui/src/*"]
+    },
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "exclude": ["node_modules", "dist", ".next"]
+}
